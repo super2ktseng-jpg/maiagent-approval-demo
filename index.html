@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MaiAgent｜AI 助理審核 Demo</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="demo.css">
+<script src="demo.js" defer></script>
+</head>
+<body>
+<aside class="sidebar">
+<div class="brand"><span class="mark" aria-hidden="true">◈</span> MAIAGENT <button id="collapse" aria-label="收合側欄" aria-expanded="true">☰</button></div>
+<div class="org">▦　示範組織 <span>⌄</span></div>
+<nav aria-label="主要導覽">
+<div class="nav-row"><i>◈</i>MaiGPT</div>
+<div class="nav-row"><i>♧</i>MaiGPT 連接器</div>
+<button class="nav-row" id="market-nav"><i>◇</i>Agent 市集</button>
+<div class="nav-row"><i>▣</i>Agent 模板庫</div>
+<div class="nav-row"><i>▱</i>檔案庫</div>
+<details open><summary><i>▤</i>會議記錄</summary><div class="nav-row sub"><i>♩</i>即時轉錄</div><div class="nav-row sub"><i>⇧</i>離線音檔上傳</div><div class="nav-row sub"><i>☷</i>會議列表</div></details>
+<details open><summary><i>✧</i>AI 功能</summary>
+<button class="nav-row sub current" id="assistants" aria-current="page"><i>✧</i>AI 助理</button>
+<button class="nav-row sub" id="review-nav" hidden><i aria-hidden="true">☷</i>助理審核</button>
+<div class="nav-row sub"><i>♬</i>語音 Agent <b>Beta</b></div>
+<div class="nav-row sub"><i>♙</i>團隊 <b>Beta</b></div>
+<div class="nav-row sub"><i>♧</i>技能</div><div class="nav-row sub"><i>⚒</i>工具</div>
+<div class="nav-row sub"><i>▥</i>知識庫</div><div class="nav-row sub"><i>▱</i>資料庫</div>
+<div class="nav-row sub"><i>⌘</i>爬蟲</div><div class="nav-row sub"><i>▦</i>Agent UI</div><div class="nav-row sub"><i>↪</i>Hook</div>
+</details>
+</nav>
+</aside>
+<div class="workspace">
+<header class="app-top"><button id="expand" aria-label="展開側欄" hidden>☰</button><div class="crumb">AI 功能 <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg> <span>／ <span id="top-page">AI 助理</span></span></div>
+<div class="top-actions"><button type="button" class="ask"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M10 7l2 5 5 2-5 2-2 5-2-5-5-2 5-2zM18 2v6m-3-3h6M4 4v4M2 6h4"/></svg>Ask AI</button><button type="button" class=""><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5c-4-3-8-2-10-1v15c4-2 7-1 10 1 3-2 6-3 10-1V4c-2-1-6-2-10 1zm0 0v15"/></svg>Cookbook</button><button type="button" class=""><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 2h9l5 5v15H5zM14 2v6h5m-10 4h6m-6 4h6"/></svg>文件</button><button type="button" class=""><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 13v-2a9 9 0 0 1 18 0v2m-18 0v4h4v-6H3zm18 0v4h-4v-6h4zm0 4c0 3-4 4-7 4"/></svg>支援中心</button><button type="button" id="bell" aria-controls="notification-popover" aria-expanded="false" aria-label="通知中心"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 16h14l-2-3V8a5 5 0 0 0-10 0v5zM10 20h4M12 1v2"/></svg><span id="unread"></span></button><button type="button" aria-label="全螢幕"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 8V3h5m8 0h5v5m0 8v5h-5m-8 0H3v-5"/></svg></button><button type="button" aria-label="切換語言"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 5h12M9 2v3m4 0c0 6-4 10-10 13m2-10c1 4 4 7 8 9m1 5 4-10 4 10m-7-3h6"/></svg></button>
+<details id="role" class="role-picker white-menu">
+<summary class="profile" id="role-trigger" aria-label="切換 Demo 身分，目前為曾組員"><span class="avatar" aria-hidden="true"></span><div><strong id="top-user">曾組員</strong><small><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 21h16M6 21V3h12v18M9 7h1m4 0h1m-6 4h1m4 0h1m-6 4h1m4 0h1m-4 6v-3h2v3"/></svg>示範組織</small></div><svg class="role-chevron" aria-hidden="true" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary>
+<div class="menu-panel" aria-label="Demo 身分">
+<button type="button" data-role="creator" aria-pressed="true"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M5 20v-2a7 7 0 0 1 14 0v2z"/></svg><span>建立者・曾組員</span><svg class="role-check" aria-hidden="true" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></button>
+<button type="button" data-role="manager" aria-pressed="false"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M5 20v-2a7 7 0 0 1 14 0v2z"/></svg><span>主管・周主管</span><svg class="role-check" aria-hidden="true" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></button>
+<button type="button" data-role="deputy" aria-pressed="false"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M5 20v-2a7 7 0 0 1 14 0v2z"/></svg><span>代理人・陳副主管</span><svg class="role-check" aria-hidden="true" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></button>
+<button type="button" data-role="member" aria-pressed="false"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M5 20v-2a7 7 0 0 1 14 0v2z"/></svg><span>部門同事・李組員</span><svg class="role-check" aria-hidden="true" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></button>
+</div></details></div></header>
+<main>
+<div class="panel">
+<div class="heading"><div><h1 id="page-title">AI 助理</h1></div><div class="actions" id="page-actions"></div></div>
+<div id="content"></div>
+</div>
+<div class="demo-tools"><button id="simulate">情境設定</button></div>
+</main>
+</div>
+<dialog id="dialog" aria-labelledby="dialog-title">
+<form id="dialog-form">
+<div class="dialog-head"><h2 id="dialog-title"></h2><button type="button" id="close-dialog" aria-label="關閉">×</button></div>
+<div id="dialog-body" class="dialog-body"></div>
+<div id="dialog-actions" class="dialog-actions"></div>
+</form>
+</dialog>
+<dialog id="info-dialog" aria-labelledby="info-title">
+<div class="dialog-head"><h2 id="info-title"></h2></div>
+<div id="info-body" class="dialog-body"></div>
+<form method="dialog" class="dialog-actions"><button type="submit">關閉</button></form>
+</dialog>
+<section id="notification-popover" aria-labelledby="notification-title" hidden></section>
+<div id="action-hint" aria-hidden="true" hidden></div>
+<div id="feedback" role="status" aria-live="polite" hidden></div>
+</body>
+</html>
