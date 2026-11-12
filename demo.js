@@ -434,9 +434,9 @@ function modal(titleText, body, actions = '', handler) {
   else $('close-dialog').focus();
 }
 
-function confirm(titleText, body, label, handler, danger = false) {
+function confirm(titleText, body, label, handler, danger = false, loading = '') {
   modal(titleText, body, button('取消', 'close') +
-    `<button type="submit" class="${danger ? 'danger-fill' : 'primary'}">${esc(label)}</button>`, handler);
+    `<button type="submit" data-loading="${esc(loading)}" class="${danger ? 'danger-fill' : 'primary'}">${esc(label)}</button>`, handler);
 }
 
 function complete(message) {
@@ -624,7 +624,7 @@ function confirmDraftReview(agent, draft) {
     actions.querySelector('[value="review"]')?.focus();
   };
   $('dialog-title').textContent = '確認送審';
-  actions.innerHTML = '<button type="button" id="back-to-settings">返回修改</button><button type="submit" class="primary">確認送審</button>';
+  actions.innerHTML = '<button type="button" id="back-to-settings">返回修改</button><button type="submit" class="primary" data-loading="送審中…">確認送審</button>';
   $('back-to-settings').onclick = restore;
   onSubmit = () => {
     if (!owns(agent) || agent.deleted || pending(agent) || agent.versions.length + 1 !== number || nextReleaseNumber(agent, draft) !== targetRelease) {
@@ -722,7 +722,7 @@ function decide(agent, version, approve) {
     record(agent, approve ? `核准 ${versionName(version)}` : `退回 ${versionName(version)}：${reason}`);
     notify(agent.owner || 'creator', approve ? 'approved' : 'returned', agent, version);
     complete(approve ? '已核准，已通知建立者' : '已退回，已通知建立者');
-  });
+  }, false, approve ? '核准中…' : '退回中…');
 }
 
 function copySettings(version) {
@@ -818,7 +818,7 @@ function publish(agent, version) {
     version.publishedAt ??= timestamp();
     record(agent, `${action}・${versionName(version)}・品保部 ${members.length} 人`);
     complete(`${action}成功`);
-  });
+  }, false, isPublishedAlternative() ? '切換中…' : '發布中…');
 }
 
 function toggle(agent) {
@@ -1023,10 +1023,31 @@ function renderChat() {
   renderChatMessages();
   renderAttachments();
   $('thread-search').oninput = event => { chatPage.query = event.target.value; renderThreads(); };
-  $('chat-files').onchange = event => {
-    chatPage.attachments.push(...Array.from(event.target.files, file => file.name));
-    event.target.value = '';
-    renderAttachments();
+  $('chat-files').onchange = async event => {
+    const input = event.currentTarget;
+    const names = Array.from(input.files, file => file.name);
+    if (!names.length) return;
+    const page = chatPage;
+    const send = input.form.querySelector('button[type="submit"]');
+    const label = input.parentElement;
+    const status = document.createElement('span');
+    status.setAttribute('role', 'status');
+    status.className = 'loading-indicator';
+    status.textContent = '附件處理中…';
+    label.after(status);
+    input.disabled = true;
+    send.disabled = true;
+    try {
+      await showDemoLoading();
+      if (chatPage !== page || !input.isConnected) return;
+      page.attachments.push(...names);
+      renderAttachments();
+    } finally {
+      input.value = '';
+      input.disabled = false;
+      send.disabled = false;
+      status.remove();
+    }
   };
   const references = $('content').querySelector('.chat-references');
   const updateReferences = () => {
@@ -1348,9 +1369,36 @@ document.addEventListener('click', event => {
   if (action === 'review' && canViewReview(agent, version)) review(agent, version);
   if (action === 'approve' || action === 'return') decide(agent, version, action === 'approve');
 });
-$('dialog-form').addEventListener('submit', event => {
+// Give the static demo time to display its loading feedback before applying the change.
+const showDemoLoading = () => new Promise(resolve => setTimeout(resolve, 450));
+
+$('dialog-form').addEventListener('submit', async event => {
   event.preventDefault();
-  onSubmit?.(new FormData(event.currentTarget), event.submitter);
+  const form = event.currentTarget;
+  if (form.hasAttribute('aria-busy')) return;
+  const submitter = event.submitter || form.querySelector('button[type="submit"]');
+  const handler = onSubmit;
+  if (!handler) return;
+  const data = new FormData(form);
+  const loading = submitter?.dataset.loading;
+  if (!loading) return handler(data, submitter);
+
+  const label = submitter.textContent;
+  form.setAttribute('aria-busy', 'true');
+  submitter.disabled = true;
+  submitter.classList.add('loading-indicator');
+  submitter.textContent = loading;
+  try {
+    await showDemoLoading();
+    if ($('dialog').open && handler === onSubmit && submitter.isConnected) {
+      await handler(data, submitter);
+    }
+  } finally {
+    form.removeAttribute('aria-busy');
+    submitter.disabled = false;
+    submitter.classList.remove('loading-indicator');
+    submitter.textContent = label;
+  }
 });
 $('close-dialog').onclick = () => $('dialog').close();
 $('role').onclick = event => {

@@ -510,3 +510,24 @@ button.reason-note { position: relative; vertical-align: middle; }
   .chat-references { position: relative; inset: auto; grid-column: 1 / -1; width: auto; margin: 0 14px 14px; }
   .chat-workspace:has(.reference-card[open]) .chat-main { padding-right: 14px; }
 }
+
+.loading-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+}
+.loading-indicator::before {
+  content: '';
+  width: 0.9em;
+  height: 0.9em;
+  border: 2px solid currentColor;
+  border-inline-end-color: transparent;
+  border-radius: 50%;
+  animation: loading-spin 0.7s linear infinite;
+}
+@keyframes loading-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loading-indicator::before { animation: none; }
+}
