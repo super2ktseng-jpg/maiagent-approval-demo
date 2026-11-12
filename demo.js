@@ -162,7 +162,9 @@ function showReturnReason(version) {
 const noticesForRole = () => state.notices.filter(notice => notice.to === role);
 const canReview = (agent, version) => Boolean(version && !agent.deleted &&
   version === pending(agent) && version.reviewer === role && currentReviewer() === role);
-const activeQueue = () => state.agents.filter(agent => canReview(agent, pending(agent)));
+const canViewReview = (agent, version) => canReview(agent, version) ||
+  Boolean(role === 'manager' && !agent.deleted && version && version === pending(agent));
+const activeQueue = () => state.agents.filter(agent => canViewReview(agent, pending(agent)));
 
 function persistState() {
   try { localStorage.setItem(storageKey, JSON.stringify(state)); }
@@ -346,7 +348,7 @@ function renderRow(agent, creator, member) {
   }
   const request = pending(agent);
   if (!creator) {
-    return `<tr id="review-${esc(agent.id)}" tabindex="-1"><td>${esc(request.name)}</td><td>${esc(versionName(request))}</td><td>${esc(submitter(request))}</td><td>${esc(dateLabel(request.submittedAt))}</td><td class="pinned-actions">${iconAction('前往對話', 'chat', 'review-chat', agentAttrs(agent, request))}${iconAction('前往審核', 'view', 'review', agentAttrs(agent, request), 'next-step')}</td></tr>`;
+    return `<tr id="review-${esc(agent.id)}" tabindex="-1"><td>${esc(request.name)}</td><td>${esc(versionName(request))}</td><td>${esc(submitter(request))}</td><td>${esc(dateLabel(request.submittedAt))}</td><td class="pinned-actions">${iconAction('前往對話', 'chat', 'review-chat', agentAttrs(agent, request))}${iconAction(canReview(agent, request) ? '前往審核' : '查看案件', 'view', 'review', agentAttrs(agent, request), 'next-step')}</td></tr>`;
   }
   const candidate = releaseCandidate(agent);
   const branches = creatorBranches(agent);
@@ -356,18 +358,19 @@ function renderRow(agent, creator, member) {
   const editSource = versionCopySource(agent);
   const currentAttrs = current.editable ? attrs : agentAttrs(agent, current.settings);
   const publishInMainRow = !showVersions || Boolean(request);
-  const publishAction = candidate
+  const firstPublishSwitch = !showVersions && !version && candidate;
+  const publishAction = candidate && !firstPublishSwitch
     ? iconAction(`發布 ${versionName(candidate)}`, 'publish', 'publish', agentAttrs(agent, candidate))
     : '';
   const status = showVersions
-    ? (agent.open ? '已發布' : version ? '已下架' : candidate && publishInMainRow ? '審核通過尚未發布' : '未發布')
+    ? (agent.open ? '已發布' : version ? '已下架' : candidate && publishInMainRow ? '審核通過尚未發布' : request ? '待審核' : '未發布')
     : current.status;
   const progressTone = ({
     '已發布': 'published', '待審核': 'wait', '退回修改': 'returned', '審核通過尚未發布': 'approved'
   })[status] ?? 'neutral';
   const singleSnapshot = !showVersions && !current.editable ? latest(agent) : null;
   const singleStatus = ({returned: '已退回', withdrawn: '已撤回', approved: '待發布'})[singleSnapshot?.status];
-  const progress = !version && candidate && publishInMainRow ? `${versionName(candidate)} 待發布`
+  const progress = firstPublishSwitch ? '待發布' : !version && candidate && publishInMainRow ? `${versionName(candidate)} 待發布`
     : !version && singleStatus ? `${versionName(singleSnapshot)} ${singleStatus}` : status;
   const updatedAt = branches.flatMap(({settings}) => [settings?.updatedAt, settings?.submittedAt, settings?.decidedAt, settings?.publishedAt]).filter(Boolean).sort().at(-1);
   const copies = showVersions ? [...agent.versions].reverse() : [];
@@ -402,7 +405,7 @@ function renderRow(agent, creator, member) {
   return `<tr class="assistant-group" id="assistant-${esc(agent.id)}" tabindex="-1">
     <td class="expand-column">${copyIds ? `<button type="button" data-action="expand-versions" ${attrs} aria-expanded="${expanded}" aria-controls="${esc(copyIds)}" aria-label="${esc(title(agent))}的其他副本">${expanded ? '▾' : '▸'}</button>` : ''}</td>
     <td><strong>${esc(title(agent))}</strong></td>
-    <td>${version ? `<div class="release-state">${button('V' + releaseNumber(version), 'snapshot', agentAttrs(agent, version), 'text')}<button type="button" class="switch" role="switch" aria-checked="${agent.open}" aria-label="${esc(title(agent))} 上下架" data-action="toggle" ${agentAttrs(agent, version)}></button></div>` : ''}</td>
+    <td>${version || firstPublishSwitch ? `<div class="release-state">${version ? button('V' + releaseNumber(version), 'snapshot', agentAttrs(agent, version), 'text') : '<span></span>'}<button type="button" class="switch" role="switch" aria-checked="${agent.open}" aria-label="${firstPublishSwitch ? '發布 ' + versionName(candidate) : esc(title(agent)) + ' 上下架'}" data-action="toggle" ${agentAttrs(agent, version)}></button></div>` : ''}</td>
     <td>${badge(progress, singleSnapshot?.status === 'returned' ? 'returned' : progressTone)}${reasonButton(agent, singleSnapshot)}</td>
     <td>${esc(department(version || current.settings))}</td>
     <td><time>${esc(dateLabel(updatedAt))}</time></td>
@@ -657,13 +660,14 @@ function renderReviewPage(agent, version) {
     version.status === 'withdrawn' ? '建立者已撤回這筆申請。' :
     version.status === 'approved' ? '審核已通過。' :
     version.status === 'returned' ? '申請已退回。' :
-    !canReview(agent, version) ? `審核安排已變更，目前由 ${reviewerLabel()} 處理。` : '';
+    !canViewReview(agent, version) ? '審核安排已變更。' : '';
   if (closed) {
     $('content').innerHTML = `<h2 id="review-heading" tabindex="-1">案件狀態</h2><p class="banner">${esc(closed)}</p>`;
     return;
   }
 
-  $('page-actions').innerHTML = button('開啟試用對話', 'review-chat', agentAttrs(agent, version)) + $('page-actions').innerHTML;
+  const mayDecide = canReview(agent, version);
+  if (mayDecide) $('page-actions').innerHTML = button('開啟試用對話', 'review-chat', agentAttrs(agent, version)) + $('page-actions').innerHTML;
   const reviewBase = version.reviewBase === undefined
     ? live(agent) : agent.versions.find(item => item.number === version.reviewBase);
   const facts = (entries) => `<dl class="review-facts">${entries.map(([label, value]) =>
@@ -679,6 +683,7 @@ function renderReviewPage(agent, version) {
   for (const [key, [label]] of Object.entries(setupFields)) sections[key] = [[label, version[key]]];
   $('content').innerHTML = `
     <div class="review-overview">
+      ${mayDecide ? '' : `<p class="banner">僅供查看。審核安排：${esc(reviewerLabel())}</p>`}
       <h2 id="review-heading" tabindex="-1">${esc(version.name)} ${badge('待審核', 'wait')}</h2>
       ${facts([['送審版本',versionName(version)],['送審人',submitter(version)],['送審時間',dateLabel(version.submittedAt)],['開放範圍',department(version)],['審核人',reviewerLabel()],['目前發布版本',agent.open && live(agent) ? versionName(live(agent)) : '未開放']])}
       <h3>用途與變更摘要</h3><p class="review-copy">${esc(version.purpose || '未填寫')}</p>${settingChanges(reviewBase, version)}
@@ -692,8 +697,8 @@ function renderReviewPage(agent, version) {
         ${agent.versions.filter(item => item.decidedAt && item.number < version.number).reverse().map(item => `<article class="review-history-entry"><strong>${esc(versionName(item))} · ${item.status === 'approved' ? '已核准' : '退回修改'}</strong><p class="muted">${esc(item.decidedBy)} ／ ${esc(dateLabel(item.decidedAt))}</p>${item.reason ? `<p class="review-copy">${esc(item.reason)}</p>` : ''}</article>`).join('') || '<p class="muted">首次送審，尚無審核紀錄。</p>'}
       </section>
       </div>
-    <div class="review-footer review-decision-bar actions">${button('退回修改', 'return', agentAttrs(agent, version))}
-    ${button('核准', 'approve', agentAttrs(agent, version), 'primary')}</div>`;
+    ${mayDecide ? `<div class="review-footer review-decision-bar actions">${button('退回修改', 'return', agentAttrs(agent, version))}
+    ${button('核准', 'approve', agentAttrs(agent, version), 'primary')}</div>` : ''}`;
 
 }
 
@@ -1355,7 +1360,7 @@ document.addEventListener('click', event => {
   if (action === 'chat') return chat(agent);
   if (role === 'member' || role === 'creator' || !version) return;
   if (action === 'review-chat' && canReview(agent, version)) tryVersion(agent, version);
-  if (action === 'review' && canReview(agent, version)) review(agent, version);
+  if (action === 'review' && canViewReview(agent, version)) review(agent, version);
   if (action === 'approve' || action === 'return') decide(agent, version, action === 'approve');
 });
 $('dialog-form').addEventListener('submit', event => {
