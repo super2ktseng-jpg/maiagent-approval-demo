@@ -41,7 +41,7 @@ const initial = () => {
       }]}
     ],
     notices: [{id: 1, to: 'manager', kind: 'review', agent: 'QA-003', name: '部門新人指引', version: 1, at: hoursAgo(1), read: false}],
-    nextId: 4, fail: false, schedule: {enabled: false, delegate: 'deputy'}
+    nextId: 4, schedule: {enabled: false, delegate: 'deputy'}
   };
 };
 let state;
@@ -811,17 +811,6 @@ function publish(agent, version) {
     const currentDuplicates = duplicatePublications(agent, version);
     if (currentDuplicates.some(other => !duplicates.includes(other))) return publish(agent, version);
     if (currentDuplicates.length && !form?.get('confirmDuplicate')) return showError('請確認是否同時開放同名助理。');
-    if (state.fail) {
-      state.fail = false;
-      agent.error = agent.open ? '發佈失敗，原版本仍可使用' : '開啟失敗，尚未開放';
-      record(agent, `${action}失敗・${versionName(version)}`);
-      save();
-      showError(`網路連線逾時，未能${action} ${versionName(version)}。${agent.open ? `${versionName(before)} 仍可使用。` : '部門仍未開放。'} 請確認網路連線，稍後點「重試發布」。若仍失敗，請提供助理名稱、版本和發生時間給支援人員。`);
-      const retry = $('dialog-actions').querySelector('[type="submit"]');
-      retry.textContent = '重試發布';
-      retry.focus();
-      return;
-    }
     version.updatedAt = timestamp();
     agent.active = version.number;
     agent.open = true;
@@ -1201,11 +1190,8 @@ function chatAction(action, data) {
 function simulate() {
   modal('情境設定', `<p>主管狀態：<strong>${state.managerOnLeave ? '請假' : '在班'}</strong></p>
     <p>目前審核安排：${esc(reviewerLabel())}</p>
-    ${button(state.managerOnLeave ? '模擬主管返工' : '模擬主管請假', 'toggle-manager-leave')}
-    <p>用一次失敗測試發布的重試流程。</p>
-    <p>下次開啟或發佈：${state.fail ? '模擬失敗' : '正常'}</p>`,
-    button('重設 Demo 資料', 'reset-demo', '', 'danger') +
-    button(state.fail ? '取消模擬失敗' : '模擬下次發佈失敗', 'simulate-failure', '', 'primary'));
+    ${button(state.managerOnLeave ? '模擬主管返工' : '模擬主管請假', 'toggle-manager-leave')}`,
+    button('重設 Demo 資料', 'reset-demo', '', 'danger'));
 }
 
 function chooseCopy(agent, version) {
@@ -1303,7 +1289,6 @@ const generalActions = {
   'org-announcements': () => { noticeTab = 'org'; notifications(); },
   'review-notices': () => { noticeTab = 'review'; notifications(); },
   'toggle-manager-leave': () => { state.managerOnLeave = !state.managerOnLeave; syncReviewers(); save(); simulate(); },
-  'simulate-failure': () => { state.fail = !state.fail; save(); simulate(); },
   'reset-demo': () => confirm('重設 Demo 資料', '<p>將清除本機示範進度與通知。</p>', '確認重設', () => {
     state = initial();
     chatPage = null;
