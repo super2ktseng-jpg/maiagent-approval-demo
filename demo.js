@@ -358,7 +358,7 @@ function renderRow(agent, creator, member) {
   const current = branches.find(branch => version && branch.settings === version) ?? branches[0];
   const editSource = versionCopySource(agent);
   const currentAttrs = current.editable ? attrs : agentAttrs(agent, current.settings);
-  const publishInMainRow = !showVersions || Boolean(request);
+  const publishInMainRow = !showVersions || (!version && Boolean(request));
   const firstPublishSwitch = !showVersions && !version && candidate;
   const publishAction = candidate && !firstPublishSwitch
     ? iconAction(`發布 ${versionName(candidate)}`, 'publish', 'publish', agentAttrs(agent, candidate))
