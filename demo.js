@@ -49,7 +49,8 @@ let state;
 try { state = JSON.parse(localStorage.getItem(storageKey)) || initial(); }
 catch { state = initial(); }
 // Older demos allowed a second deputy. Keep existing cases and notifications accessible.
-const delegateRoles = ['deputy', 'member'];
+const delegateRoles = ['deputy'];
+const delegateOptions = [['deputy', '陳副主管（下一位主管）'], ['member', '李組員'], ['lin', '林組員'], ['huang', '黃組員']];
 if (state.schedule?.delegate === 'alternate') state.schedule.delegate = 'deputy';
 if (typeof state.schedule?.enabled !== 'boolean') {
   const previous = state.schedule || {};
@@ -230,7 +231,7 @@ function render({rowsOnly = false} = {}) {
     : matchesRow(member ? live(agent) : pending(agent), releaseNumber(member ? live(agent) : pending(agent))) &&
       (member || matchesSubmitter(pending(agent))));
   const reviewNav = $('review-nav');
-  reviewNav.hidden = !['manager', 'deputy'].includes(role) && currentReviewer() !== role;
+  reviewNav.hidden = !['manager', 'deputy'].includes(role);
   reviewNav.classList.toggle('current', reviewing);
   $('assistants').classList.toggle('current', !reviewing && !market);
   $('market-nav').classList.toggle('current', market);
@@ -855,10 +856,10 @@ function schedule() {
   confirm('設定代理', `<div class="schedule-field">代理審核
     ${picker('enabled', [['no', '不使用代理'], ['yes', '使用代理']], enabled ? 'yes' : 'no')}</div>
     <div class="schedule-field" id="delegate-picker" ${enabled ? '' : 'hidden'}>代理人
-    ${picker('delegate', delegateRoles.map(key => [key, key === 'deputy' ? people[key] + '（下一位主管）' : people[key]]), delegateRoles.includes(delegate) ? delegate : 'deputy')}</div>
-    <p class="muted">主管在班時由主管審核。主管請假時，待審與新送審案件會交由代理人處理。</p>`, '儲存設定', form => {
+    ${picker('delegate', delegateOptions, delegateOptions.some(([key]) => key === delegate) ? delegate : 'deputy')}</div>
+    <p class="muted">主管在班時由主管審核。Demo 由陳副主管示範接手審核。其他人員供選單展示。</p>`, '儲存設定', form => {
     const nextDelegate = form.get('delegate');
-    if (!delegateRoles.includes(nextDelegate)) return showError('請選擇代理人。');
+    if (!delegateOptions.some(([key]) => key === nextDelegate)) return showError('請選擇代理人。');
     state.schedule = {enabled: form.get('enabled') === 'yes', delegate: nextDelegate};
     syncReviewers();
     complete('已更新代理設定');
@@ -1376,7 +1377,7 @@ document.addEventListener('click', event => {
   if (!agent) return;
   if (owns(agent) && !agent.deleted && Object.hasOwn(creatorActions, action)) return creatorActions[action](agent, version);
   if (action === 'chat') return chat(agent);
-  if (role === 'creator' || !version) return;
+  if (role === 'member' || role === 'creator' || !version) return;
   if (action === 'review-chat' && canReview(agent, version)) tryVersion(agent, version);
   if (action === 'review' && canViewReview(agent, version)) review(agent, version);
   if (action === 'approve' || action === 'return') decide(agent, version, action === 'approve');
@@ -1426,7 +1427,7 @@ $('role').onclick = event => {
   listFilters = {status:'', department:''};
   role = nextRole;
   market = false;
-  reviewing = role === 'manager' || role === 'deputy' || currentReviewer() === role;
+  reviewing = role === 'manager' || delegateRoles.includes(role);
   reviewHistory = false;
   submitterQuery = '';
   query = '';
