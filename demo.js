@@ -851,7 +851,7 @@ function remove(agent) {
 function schedule() {
   const {enabled, delegate} = state.schedule;
   const picker = (name, options, selected) => `<details class="schedule-select"><summary>${esc(options.find(([key]) => key === selected)[1])}</summary>
-    <div class="schedule-options">${options.map(([key, label]) =>
+    <div class="schedule-options" popover="manual">${options.map(([key, label]) =>
       `<label><input type="radio" name="${name}" value="${key}" ${key === selected ? 'checked' : ''}><span>${esc(label)}</span></label>`).join('')}</div></details>`;
   confirm('設定代理', `<div class="schedule-field">代理審核
     ${picker('enabled', [['no', '不使用代理'], ['yes', '使用代理']], enabled ? 'yes' : 'no')}</div>
@@ -866,14 +866,40 @@ function schedule() {
   });
   const menus = $('dialog-body').querySelectorAll('.schedule-select');
   for (const menu of menus) {
+    const popup = menu.querySelector('.schedule-options');
     menu.addEventListener('toggle', () => {
-      if (menu.open) menus.forEach(other => { if (other !== menu) other.open = false; });
+      if (!menu.open) {
+        if (popup.matches(':popover-open')) popup.hidePopover();
+        return;
+      }
+      if (!$('dialog').open) return;
+      menus.forEach(other => {
+        if (other === menu) return;
+        other.open = false;
+        const otherPopup = other.querySelector('.schedule-options');
+        if (otherPopup.matches(':popover-open')) otherPopup.hidePopover();
+      });
+      const anchor = menu.querySelector('summary').getBoundingClientRect();
+      popup.style.left = `${anchor.left}px`;
+      popup.style.width = `${anchor.width}px`;
+      popup.showPopover();
+      const opensUp = window.innerHeight - anchor.bottom < popup.offsetHeight + 12 &&
+        anchor.top > window.innerHeight - anchor.bottom;
+      popup.style.top = `${opensUp ? Math.max(8, anchor.top - popup.offsetHeight - 4) : anchor.bottom + 4}px`;
+    });
+    popup.addEventListener('keydown', event => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      menu.open = false;
+      popup.hidePopover();
+      menu.querySelector('summary').focus();
     });
     menu.addEventListener('change', event => {
       const input = event.target;
       const summary = menu.querySelector('summary');
       summary.textContent = input.nextElementSibling.textContent;
       menu.open = false;
+      if (popup.matches(':popover-open')) popup.hidePopover();
       summary.focus();
       if (input.name === 'enabled') $('delegate-picker').hidden = input.value !== 'yes';
     });

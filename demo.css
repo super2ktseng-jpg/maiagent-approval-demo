@@ -590,3 +590,17 @@ button.reason-note { position: relative; vertical-align: middle; }
 #dialog .schedule-options label:hover { background: #f4f7fa; }
 #dialog .schedule-options label:has(input:checked) { background: #e0f2fa; }
 #dialog .schedule-options label:has(input:focus-visible) { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+
+
+.schedule-select[open] > summary::after {
+  content: '';
+  transform: rotate(225deg);
+}
+.schedule-select > summary::after { flex: 0 0 6px; }
+.schedule-options:popover-open {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  box-sizing: border-box;
+  color: var(--color-text);
+}
