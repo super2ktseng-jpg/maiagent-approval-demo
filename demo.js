@@ -1,6 +1,7 @@
 const $ = id => document.getElementById(id);
 const people = {creator: '曾組員', manager: '周主管', deputy: '陳副主管', member: '李組員'};
 const members = Object.values(people);
+const departments = ['品保部', '製造部', '工程部', '採購部', '倉儲部', '人資部'];
 const department = settings => settings?.department || '品保部';
 const storageKey = 'maiagent-approval-demo-v1';
 const initial = () => {
@@ -478,10 +479,10 @@ function setupMarkup(draft, agent) {
       ${agent && (pending(agent) || releaseCandidate(agent) || live(agent)) ? selectField('releaseKind', '更新幅度', ['小版更新', '大版更新'], draft.releaseKind || '大版更新') + '<p class="muted">用途、使用範圍或操作能力有實質變更時，請選大版更新。版號會在確認送審時顯示。</p>' : ''}
       <label>用途與變更摘要 <textarea name="purpose" maxlength="500">${esc(draft.purpose)}</textarea></label>
       <label>角色指令 <textarea name="instructions" maxlength="2000">${esc(draft.instructions)}</textarea></label>`,
-    platform: '<p class="banner">僅內部對話</p><p>建立者在審核通過後開啟，品保部成員即可使用。</p>',
+    platform: '<p class="banner">僅內部對話</p><p>建立者在審核通過後開啟，所選部門成員即可使用。</p>',
     reply: selectField('reply', '回答模式', ['Agent 模式', '一般回覆', '模板模式', '混合模式', '工作流模式'], draft.reply),
     tags: `<label>資料標籤<input name="tags" value="${esc(draft.tags)}" placeholder="以逗號分隔，例如：現行 SOP, 品保"></label>`,
-    permission: `${selectField('department', '使用部門', ['品保部'], department(draft))}<p>由直屬主管審核。核准後，建立者確認部門成員並開啟。</p>`,
+    permission: `${selectField('department', '使用部門', departments, department(draft))}<p>由直屬主管審核。核准後，建立者確認部門成員並開啟。</p>`,
     advanced: `<label>回覆長度上限 <input type="number" name="advanced" min="512" step="1" value="${esc(draft.advanced)}" placeholder="使用模型預設"></label>`
   };
   for (const [key, [label, example]] of Object.entries(setupFields)) {
@@ -816,7 +817,7 @@ function publish(agent, version) {
     agent.open = true;
     agent.error = '';
     version.publishedAt ??= timestamp();
-    record(agent, `${action}・${versionName(version)}・品保部 ${members.length} 人`);
+    record(agent, `${action}・${versionName(version)}・${department(version)} ${members.length} 人`);
     complete(`${action}成功`);
   }, false, isPublishedAlternative() ? '切換中…' : '發布中…');
 }
