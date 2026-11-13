@@ -864,7 +864,11 @@ function schedule() {
     syncReviewers();
     complete('已更新代理設定');
   });
-  for (const menu of $('dialog-body').querySelectorAll('.schedule-select')) {
+  const menus = $('dialog-body').querySelectorAll('.schedule-select');
+  for (const menu of menus) {
+    menu.addEventListener('toggle', () => {
+      if (menu.open) menus.forEach(other => { if (other !== menu) other.open = false; });
+    });
     menu.addEventListener('change', event => {
       const input = event.target;
       const summary = menu.querySelector('summary');
